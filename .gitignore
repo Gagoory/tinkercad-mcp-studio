@@ -1,0 +1,20 @@
+# Browser profiles, cookies, and screenshots (NEVER commit!)
+.browser-profile/
+**/browser-profile/
+**/screenshots/
+
+# Node dependencies and build output
+node_modules/
+**/node_modules/
+server/dist/
+
+# Environment variables & local secrets
+.env
+.env.*
+*.log
+
+# OS & IDE files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

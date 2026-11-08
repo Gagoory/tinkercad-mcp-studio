@@ -1,0 +1,17 @@
+{
+  "name": "tinkercad",
+  "displayName": "Tinkercad Studio (Unofficial)",
+  "version": "1.2.0",
+  "license": "MIT",
+  "description": "Unofficial community plugin & hardened MCP server for building, wiring, coding, and simulating circuits in Tinkercad via local browser automation.",
+  "logo": "assets/logo.svg",
+  "suggestedPrompts": [
+    "Open Tinkercad in the browser and build an Arduino blink circuit",
+    "Design a snap-fit electronics enclosure in Tinkercad with exact dimensions",
+    "Generate a parametric spiral staircase script for Tinkercad Codeblocks"
+  ],
+  "author": {
+    "name": "Gagoory"
+  },
+  "repository": "https://github.com/Gagoory/tinkercad-mcp-studio"
+}

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "tinkercad-circuits": {
+      "command": "node",
+      "type": "stdio",
+      "args": [
+        "server/dist/index.js"
+      ]
+    }
+  }
+}

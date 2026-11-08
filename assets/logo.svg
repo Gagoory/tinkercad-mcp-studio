@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="topFace" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="100%" stop-color="#0284C7" />
+    </linearGradient>
+    <linearGradient id="leftFace" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284C7" />
+      <stop offset="100%" stop-color="#0369A1" />
+    </linearGradient>
+    <linearGradient id="rightFace" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F43F5E" />
+      <stop offset="100%" stop-color="#BE123C" />
+    </linearGradient>
+    <linearGradient id="accentGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FBBF24" />
+      <stop offset="100%" stop-color="#F59E0B" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="125%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.35" />
+    </filter>
+  </defs>
+
+  <!-- Background Base / Shadow Group with 10% margin (inside 26 to 230) -->
+  <g filter="url(#shadow)">
+    <!-- Base Isometric Cube (Tinkercad 3D Block) -->
+    <!-- Top Face -->
+    <polygon points="128,38 214,88 128,138 42,88" fill="url(#topFace)" />
+
+    <!-- Left Face (Circuits / Code Side) -->
+    <polygon points="42,88 128,138 128,218 42,168" fill="url(#leftFace)" />
+
+    <!-- Right Face (Maker / Cutout Side) -->
+    <polygon points="128,138 214,88 214,168 128,218" fill="url(#rightFace)" />
+
+    <!-- Isometric Cutout / Hole Representation (CSG Hole) -->
+    <polygon points="128,78 171,103 128,128 85,103" fill="#0F172A" opacity="0.65" />
+    <polygon points="85,103 128,128 128,155 85,130" fill="#020617" opacity="0.8" />
+    <polygon points="128,128 171,103 171,130 128,155" fill="#1E293B" opacity="0.5" />
+  </g>
+
+  <!-- Circuit Traces & Nodes on Left Face -->
+  <g stroke="#38BDF8" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.95">
+    <polyline points="58,112 76,122 76,145 95,156" fill="none" />
+    <polyline points="65,152 82,162 108,162" fill="none" />
+    <circle cx="58" cy="112" r="3.5" fill="#FBBF24" stroke="#FFFFFF" stroke-width="1.5" />
+    <circle cx="95" cy="156" r="3.5" fill="#FBBF24" stroke="#FFFFFF" stroke-width="1.5" />
+    <circle cx="65" cy="152" r="3" fill="#38BDF8" stroke="none" />
+    <circle cx="108" cy="162" r="3" fill="#38BDF8" stroke="none" />
+  </g>
+
+  <!-- Codeblocks / Tech Accent on Right Face -->
+  <g fill="none" stroke="#FDA4AF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.9">
+    <!-- Block Notch Shapes -->
+    <path d="M 148,155 L 168,143 L 180,150 L 195,141" />
+    <path d="M 148,180 L 168,168 L 180,175 L 195,166" />
+    <circle cx="148" cy="155" r="3.5" fill="#FBBF24" stroke="#FFFFFF" stroke-width="1.5" />
+    <circle cx="195" cy="166" r="3.5" fill="#FBBF24" stroke="#FFFFFF" stroke-width="1.5" />
+  </g>
+
+  <!-- Central Spark / Origin Node -->
+  <circle cx="128" cy="138" r="5" fill="#FBBF24" stroke="#FFFFFF" stroke-width="2" />
+</svg>
