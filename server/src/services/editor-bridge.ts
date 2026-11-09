@@ -17,7 +17,7 @@ import type {
 } from "../types.js";
 import { resolveComponent } from "../catalog.js";
 import { BridgeError } from "./errors.js";
-import { getLastCircuitJson, getPage, gotoTinkercad } from "./browser.js";
+import { getLastCircuitJson, getPage, gotoTinkercad, setPage } from "./browser.js";
 
 const LOGIN_URL_HINTS = ["signin", "login", "accounts.autodesk", "oauth"];
 const injectedDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "injected");
@@ -82,10 +82,18 @@ export async function loginStatus(): Promise<LoginStatus> {
 }
 
 export async function openCircuit(target: string): Promise<CircuitState> {
-  const page = await gotoTinkercad(target === "new" ? CIRCUITS_DASHBOARD_URL : target);
+  let page = await gotoTinkercad(target === "new" ? CIRCUITS_DASHBOARD_URL : target);
 
   if (target === "new") {
     await createNewCircuit(page);
+    await page.waitForTimeout(1500);
+    const ctx = page.context();
+    const pages = ctx.pages();
+    const editel = pages.find((p) => p.url().includes("/editel"));
+    if (editel) {
+      setPage(editel);
+      page = editel;
+    }
   }
 
   await waitForEditorOrLogin(page);
@@ -93,29 +101,35 @@ export async function openCircuit(target: string): Promise<CircuitState> {
 }
 
 async function createNewCircuit(page: Page): Promise<void> {
+  if (!page.url().includes("tinkercad.com/circuits")) {
+    await page.goto("https://www.tinkercad.com/circuits", { waitUntil: "domcontentloaded" });
+  }
   await page.waitForTimeout(1000);
   const directBtn = page.getByRole("button", { name: /new circuit|circuit design|회로 디자인/i }).first();
   if (await directBtn.isVisible().catch(() => false)) {
     await directBtn.click();
+    await page.waitForURL(url => url.toString().includes("/editel"), { timeout: 20000 }).catch(() => {});
     return;
   }
-  const createBtn = page.getByRole("button", { name: /^create$|^만들기$/i }).first();
+  const createBtn = page.locator("#create-design, button:has-text('만들기'), button:has-text('Create')").first();
   if (await createBtn.isVisible().catch(() => false)) {
     await createBtn.click();
-    await page.waitForTimeout(400);
-    const circuitItem = page.getByText(/^circuits$|^회로$/i).first();
+    await page.waitForTimeout(600);
+    const circuitItem = page.locator("a.button-circuits, button:has-text('회로'), a:has-text('회로')").first();
     if (await circuitItem.isVisible().catch(() => false)) {
       await circuitItem.click();
+      await page.waitForURL(url => url.toString().includes("/editel"), { timeout: 20000 }).catch(() => {});
       return;
     }
   }
   const fallbackCreate = page.getByText(/만들기|create/i).first();
   if (await fallbackCreate.isVisible().catch(() => false)) {
     await fallbackCreate.click();
-    await page.waitForTimeout(400);
-    const circuitItem = page.getByText(/^회로$|^circuits$/i).first();
+    await page.waitForTimeout(600);
+    const circuitItem = page.locator("a.button-circuits").first();
     if (await circuitItem.isVisible().catch(() => false)) {
       await circuitItem.click();
+      await page.waitForURL(url => url.toString().includes("/editel"), { timeout: 20000 }).catch(() => {});
     }
   }
 }
@@ -510,25 +524,25 @@ export async function connectPins(fromRef: string, toRef: string): Promise<Circu
           }
           if (
             (pinKey === "pin1" || pinKey === "1" || pinKey === "terminal1" || pinKey === "터미널 1") &&
-            (rawName === "터미널 1" || rawName === "terminal 1" || rawName === "1" || index === 0)
+            (rawName === "터미널 1" || rawName === "terminal 1" || rawName === "1")
           ) {
             return true;
           }
           if (
             (pinKey === "pin2" || pinKey === "2" || pinKey === "terminal2" || pinKey === "터미널 2") &&
-            (rawName === "터미널 2" || rawName === "terminal 2" || rawName === "2" || index === 1)
+            (rawName === "터미널 2" || rawName === "terminal 2" || rawName === "2")
           ) {
             return true;
           }
           if (
             (pinKey === "positive" || pinKey === "pos" || pinKey === "+" || pinKey === "anode" || pinKey === "양" || pinKey === "양극") &&
-            (rawName === "양" || rawName === "양극" || rawName === "positive" || rawName === "anode")
+            (rawName === "양" || rawName === "양극" || rawName === "positive" || rawName === "anode" || index === 0)
           ) {
             return true;
           }
           if (
             (pinKey === "negative" || pinKey === "neg" || pinKey === "-" || pinKey === "cathode" || pinKey === "gnd" || pinKey === "음" || pinKey === "음극") &&
-            (rawName === "음" || rawName === "음극" || rawName === "negative" || rawName === "cathode" || rawName === "접지" || rawName === "gnd")
+            (rawName === "음" || rawName === "음극" || rawName === "negative" || rawName === "cathode" || rawName === "접지" || rawName === "gnd" || index === 1)
           ) {
             return true;
           }

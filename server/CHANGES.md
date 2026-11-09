@@ -70,6 +70,18 @@
 
 ---
 
+## Part 4. Reliability & Localization Fixes (실제 브라우저 에디터 네비게이션 및 다국어 핀 매핑 패치)
+
+실제 회로 실습 프로젝트(커패시터 병렬 등가 회로, RC 직렬 및 병렬 임피던스/위상각 측정 회로) 생성 과정에서 발견된 에디터 진입 지연 및 한국어 UI 결선 충돌 문제를 해결한 패치 내역입니다.
+
+| # | Severity | Issue | Fix | File |
+| :-- | :-- | :-- | :-- | :-- |
+| 19 | High (Reliability) | `openCircuit("new")`에서 CSS 셀렉터와 텍스트 엔진이 쉼표로 결합되어 Playwright 파서 문법 오류(`Unexpected token "="`) 발생 및 클릭 실패. 또한 `waitUntil: "networkidle"`로 인해 팅커캐드의 실시간 웹소켓/분석 트래픽으로 30초 타임아웃 발생. | `#create-design` 고유 ID 및 `a.button-circuits` 클래스 기반 클릭으로 개편하고, `waitUntil: "domcontentloaded"`와 `page.waitForURL(/\/editel/)`로 전환하여 1초 이내 즉각 에디터 진입 보장. | `src/services/editor-bridge.ts` |
+| 20 | Medium (Navigation) | 팅커캐드 대시보드에서 신규 회로 생성 시 브라우저 팝업이나 새 탭으로 에디터가 열릴 때, 기존 세션이 이전 페이지를 계속 참조하여 에디터 요소를 찾지 못하는 문제. | `browser.ts`에 `setPage()` 함수를 신설하고 브라우저 컨텍스트의 `on("page")` 팝업 리스너와 연동하여 활성 페이지 인스턴스를 자동으로 최신 에디터 탭으로 동기화. | `src/services/browser.ts`, `src/services/editor-bridge.ts` |
+| 21 | High (Functional) | 한국어 UI 환경에서 2단자 수동소자(저항, 커패시터)의 단자 인덱스가 `[0] = "터미널 2"`, `[1] = "터미널 1"`로 반환되는데, 기존 코드의 `\|\| index === 0` 폴백 조건 때문에 `terminal1`을 요청해도 `터미널 2`가 매칭되어 핀 충돌 및 배선 생성 실패(`Pin connection failed: undefined`) 발생. | 인덱스 기반 추측(`index === 0`)을 제거하고, 현지화된 한글 단자명(`터미널 1`, `터미널 2`, `양`, `음`)을 정밀하게 1:1 매칭하도록 `matchAliases` 로직 전면 수정. | `src/services/editor-bridge.ts` |
+
+---
+
 ## Pre-publish Verification Results (공개 전환 전 체크리스트 검증 완료)
 
 - [x] 저장소 내 `.browser-profile` 폴더 및 쿠키/세션 파일 없음 (`Test-Path: False`).
@@ -77,3 +89,4 @@
 - [x] `npm audit` 취약점 **0건** 확인 완료.
 - [x] `npm run build` 및 `npm test` 14개 항목 전수 통과.
 - [x] 원저작자 MIT 라이선스 표기 및 비공식 프로젝트/상표권 면책 고지(`LICENSE`, `NOTICE.md`, `SECURITY.md`, `README.md`) 완료.
+- [x] 실제 Tinkercad 회로 생성, 다국어 단자 자동 결선, 시뮬레이션 및 스크린샷 캡처 실동작 검증 완료.

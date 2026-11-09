@@ -22,6 +22,17 @@ export function getLastCircuitJson(): unknown {
   return lastCircuitJson;
 }
 
+export function setPage(p: Page): void {
+  page = p;
+  page.setDefaultTimeout(DEFAULT_TIMEOUT_MS);
+  page.setDefaultNavigationTimeout(DEFAULT_TIMEOUT_MS);
+  page.on("close", () => {
+    if (page === p) {
+      page = undefined;
+    }
+  });
+}
+
 export async function getPage(): Promise<Page> {
   if (page && !page.isClosed()) {
     return page;
@@ -101,6 +112,7 @@ function attachNavigationGuard(browserContext: BrowserContext): void {
   });
 
   browserContext.on("page", (popup) => {
+    setPage(popup);
     popup.on("framenavigated", (frame) => {
       if (frame !== popup.mainFrame()) return;
       const u = frame.url();
