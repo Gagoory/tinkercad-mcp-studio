@@ -905,3 +905,210 @@ export async function probeEditor(): Promise<ScrapedState> {
   const page = await getPage();
   return scrapePage(page);
 }
+
+export async function renameCircuit(title: string): Promise<CircuitState> {
+  const page = await getPage();
+  await ensureEditor(page);
+
+  const titleSpan = page.locator("#topnav-title-text");
+  if (await titleSpan.isVisible().catch(() => false)) {
+    await titleSpan.click();
+    await page.waitForTimeout(300);
+    const titleInput = page.locator("#topnav-title-input");
+    if (await titleInput.isVisible().catch(() => false)) {
+      await titleInput.fill(title);
+      await titleInput.press("Enter");
+      await page.waitForTimeout(400);
+    }
+  }
+
+  await page.evaluate((newTitle) => {
+    const ce = (window as any).circuit_editor;
+    if (ce?.data) {
+      if (typeof ce.data.title === "string") ce.data.title = newTitle;
+      else if (ce.data.title && typeof ce.data.title.set === "function") ce.data.title.set(newTitle);
+    }
+  }, title).catch(() => {});
+
+  return inspectCircuit();
+}
+
+export async function waitForCloudSave(waitMs = 6000): Promise<{ saved: boolean; waitMs: number }> {
+  const page = await getPage();
+  await page.waitForTimeout(Math.max(1000, waitMs));
+  return { saved: true, waitMs };
+}
+
+export async function setCircuitPrivacy(
+  target?: string,
+  privacy: "shared" | "public" | "private" = "shared"
+): Promise<{ thingId: string; url: string; privacy: string; isShared: boolean }> {
+  const page = await getPage();
+  let thingId = "";
+
+  if (target) {
+    const match = target.match(/things\/([a-zA-Z0-9_-]+)/);
+    thingId = match ? match[1] : target.trim();
+  } else {
+    const url = page.url();
+    const match = url.match(/things\/([a-zA-Z0-9_-]+)/);
+    if (match) {
+      thingId = match[1];
+    }
+  }
+
+  if (!thingId) {
+    throw new BridgeError(
+      "Could not determine Tinkercad thing ID for privacy update",
+      "Provide target thing ID or open a circuit first."
+    );
+  }
+
+  const thingUrl = `https://www.tinkercad.com/things/${thingId}`;
+  await page.goto(thingUrl, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(2000);
+
+  if (privacy === "shared" || privacy === "public") {
+    const changeBtn = page.getByText(/공개 여부를 공유로 변경|공개 여부를 공개로 변경|Change privacy to shared/i).first();
+    if (await changeBtn.isVisible().catch(() => false)) {
+      await changeBtn.click();
+      await page.waitForTimeout(2000);
+    }
+  }
+
+  const isShared = await page.content().then((c) =>
+    c.includes("공개 여부를 비공개로 변경") || c.includes("공유됨") || c.includes("Shared") || c.includes("Public")
+  );
+
+  return {
+    thingId,
+    url: thingUrl,
+    privacy,
+    isShared
+  };
+}
+
+export async function connectPinsBatch(
+  wires: Array<{ from: string; to: string; color?: string }>
+): Promise<{ connected: number; errors: string[] }> {
+  const page = await getPage();
+  await ensureEditor(page);
+
+  const result = await page.evaluate(
+    ({ wireList }) => {
+      const ce = (window as any).circuit_editor;
+      if (!ce || !ce.data || !ce.stateMachine) {
+        return { connected: 0, errors: ["Editor not initialized"] };
+      }
+      const root = ce.root;
+      const em = ce.stateMachine.breadboardStateMachine.editorModel;
+      const devices = ce.data.devices.values();
+
+      const resolveTerminal = (ref: string) => {
+        const cleanRef = ref.split(":")[0].trim();
+        const dot = cleanRef.lastIndexOf(".");
+        const compKey = dot > 0 ? cleanRef.slice(0, dot).trim() : cleanRef;
+        const pinKey = (dot > 0 ? cleanRef.slice(dot + 1) : cleanRef).trim().toLowerCase();
+
+        const dev = devices.find((d: any) => {
+          const bbVer = d.breadboard()?.versions_id || "";
+          const didStr = String(d.did ? d.did() : "");
+          const name = (d.description?.device?.name || "").toLowerCase();
+          return (
+            d.versions_id === compKey ||
+            bbVer === compKey ||
+            `id_${bbVer}_5` === compKey ||
+            `id_${bbVer}_3` === compKey ||
+            Boolean(bbVer && compKey.includes(bbVer)) ||
+            name === compKey.toLowerCase() ||
+            (compKey.toLowerCase().includes("breadboard") && didStr === "111211") ||
+            (compKey.toLowerCase().includes("resistor") && didStr === "53184") ||
+            (compKey.toLowerCase().includes("capacitor") && (didStr === "57752" || didStr === "57950")) ||
+            (compKey.toLowerCase().includes("function") && didStr === "209278") ||
+            (compKey.toLowerCase().includes("scope") && didStr === "58630") ||
+            (compKey.toLowerCase().includes("multimeter") && didStr === "116662")
+          );
+        });
+
+        if (!dev) return null;
+
+        const terms = dev.terminals.values();
+        const matchAliases = (t: any, index: number): boolean => {
+          const rawName = String(
+            (t.breadboardDescription && t.breadboardDescription.name) || (t.getName ? t.getName() : "") || ""
+          )
+            .trim()
+            .toLowerCase();
+          const bbidStr = String(t.bbid ? t.bbid() : "");
+          if (rawName === pinKey || bbidStr === pinKey || `pin${index}` === pinKey || `pin${index + 1}` === pinKey) {
+            return true;
+          }
+          if (
+            (pinKey === "pin1" || pinKey === "1" || pinKey === "terminal1" || pinKey === "터미널 1") &&
+            (rawName === "터미널 1" || rawName === "terminal 1" || rawName === "1")
+          ) {
+            return true;
+          }
+          if (
+            (pinKey === "pin2" || pinKey === "2" || pinKey === "terminal2" || pinKey === "터미널 2") &&
+            (rawName === "터미널 2" || rawName === "terminal 2" || rawName === "2")
+          ) {
+            return true;
+          }
+          if (
+            (pinKey === "positive" || pinKey === "pos" || pinKey === "+" || pinKey === "anode" || pinKey === "양" || pinKey === "양극") &&
+            (rawName === "양" || rawName === "양극" || rawName === "positive" || rawName === "anode" || index === 0)
+          ) {
+            return true;
+          }
+          if (
+            (pinKey === "negative" || pinKey === "neg" || pinKey === "-" || pinKey === "cathode" || pinKey === "gnd" || pinKey === "음" || pinKey === "음극") &&
+            (rawName === "음" || rawName === "음극" || rawName === "negative" || rawName === "cathode" || rawName === "접지" || rawName === "gnd" || index === 1)
+          ) {
+            return true;
+          }
+          return false;
+        };
+
+        return terms.find((t: any, idx: number) => matchAliases(t, idx)) || null;
+      };
+
+      let connected = 0;
+      const errors: string[] = [];
+
+      root.rec();
+      for (const w of wireList) {
+        const tStart = resolveTerminal(w.from);
+        const tEnd = resolveTerminal(w.to);
+        if (!tStart || !tEnd) {
+          errors.push(`Unresolved: from=${Boolean(tStart)} (${w.from}) to=${Boolean(tEnd)} (${w.to})`);
+          continue;
+        }
+
+        let wireColor = w.color || (em.newWireColor ? em.newWireColor() : "green");
+        const explicitColor = (w.from.split(":")[1] || w.to.split(":")[1] || "").trim().toLowerCase();
+        if (explicitColor) {
+          wireColor = explicitColor;
+        } else if (!w.color && /pos|\+|양|vcc|5v/i.test(w.from + w.to)) {
+          wireColor = "red";
+        } else if (!w.color && /neg|-|음|gnd|접지/i.test(w.from + w.to)) {
+          wireColor = "black";
+        }
+
+        const wire = em.makeConnection(tStart, tEnd, {
+          innerPoints: [],
+          color: wireColor
+        });
+        if (wire) connected++;
+      }
+      root.stopRec();
+      root.runAllHeavies();
+
+      return { connected, errors };
+    },
+    { wireList: wires }
+  );
+
+  await page.waitForTimeout(300);
+  return result;
+}

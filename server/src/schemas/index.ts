@@ -88,6 +88,22 @@ export const SetCodeInputSchema = z.object({
 export const StartSimulationInputSchema = z.object({}).strict();
 export const StopSimulationInputSchema = z.object({}).strict();
 
+export const RenameCircuitInputSchema = z.object({
+  title: z.string().min(1).max(200).describe("New title for the circuit project"),
+  response_format: ResponseFormatSchema
+}).strict();
+
+export const SetPrivacyInputSchema = z.object({
+  target: z.string().max(500).optional().describe("Thing ID or URL, or omit to use currently open circuit"),
+  privacy: z.enum(["shared", "public", "private"]).default("shared").describe("Privacy level: shared (anyone with link), public, or private"),
+  response_format: ResponseFormatSchema
+}).strict();
+
+export const WaitSaveInputSchema = z.object({
+  wait_ms: z.number().int().min(1000).max(30000).default(6000).describe("Milliseconds to wait for Autodesk cloud auto-save sync"),
+  response_format: ResponseFormatSchema
+}).strict();
+
 export const ReadSerialInputSchema = z.object({
   wait_ms: z.number().int().min(0).max(20_000).default(1500).describe("How long to wait for serial output before reading"),
   response_format: ResponseFormatSchema
@@ -103,11 +119,14 @@ const NetlistComponentSchema = z.object({
 
 const NetlistWireSchema = z.object({
   from: z.string().min(1).max(160).describe("ref.pin, e.g. uno.D13"),
-  to: z.string().min(1).max(160).describe("ref.pin, e.g. led1.anode")
+  to: z.string().min(1).max(160).describe("ref.pin, e.g. led1.anode"),
+  color: z.string().max(30).optional().describe("Wire color: red, black, yellow, green, blue, etc.")
 }).strict();
 
 export const BuildCircuitInputSchema = z.object({
   title: z.string().max(80).optional(),
+  privacy: z.enum(["shared", "public", "private"]).optional().describe("Set privacy after building (e.g. shared)"),
+  wait_for_save: z.boolean().default(true).describe("Wait for Autodesk cloud auto-save sync"),
   components: z.array(NetlistComponentSchema).min(1).max(40),
   wires: z.array(NetlistWireSchema).max(80).default([]),
   code: z.string().max(80_000).optional(),
@@ -127,5 +146,8 @@ export type DeleteWireInput = z.infer<typeof DeleteWireInputSchema>;
 export type SetAttributeInput = z.infer<typeof SetAttributeInputSchema>;
 export type GetCodeInput = z.infer<typeof GetCodeInputSchema>;
 export type SetCodeInput = z.infer<typeof SetCodeInputSchema>;
+export type RenameCircuitInput = z.infer<typeof RenameCircuitInputSchema>;
+export type SetPrivacyInput = z.infer<typeof SetPrivacyInputSchema>;
+export type WaitSaveInput = z.infer<typeof WaitSaveInputSchema>;
 export type ReadSerialInput = z.infer<typeof ReadSerialInputSchema>;
 export type BuildCircuitInput = z.infer<typeof BuildCircuitInputSchema>;

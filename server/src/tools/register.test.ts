@@ -19,6 +19,9 @@ const EXPECTED = [
   "tinkercad_set_code",
   "tinkercad_start_simulation",
   "tinkercad_stop_simulation",
+  "tinkercad_rename_circuit",
+  "tinkercad_set_privacy",
+  "tinkercad_wait_save",
   "tinkercad_read_serial",
   "tinkercad_build_circuit"
 ];

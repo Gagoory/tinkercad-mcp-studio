@@ -2,7 +2,7 @@ import path from "node:path";
 import os from "node:os";
 
 export const SERVER_NAME = "tinkercad-mcp-server";
-export const SERVER_VERSION = "1.0.0";
+export const SERVER_VERSION = "1.1.0";
 
 export const TINKERCAD_ORIGIN = "https://www.tinkercad.com";
 export const CIRCUITS_DASHBOARD_URL = `${TINKERCAD_ORIGIN}/circuits`;

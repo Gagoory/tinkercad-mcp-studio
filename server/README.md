@@ -98,7 +98,7 @@ From this folder:
 npm run list-tools
 ```
 
-You should see 17 tools, including `tinkercad_login_status` and `tinkercad_build_circuit`.
+You should see 20 tools, including `tinkercad_login_status` and `tinkercad_build_circuit`.
 
 Then in Cursor / Claude / Codex, ask:
 
@@ -130,6 +130,9 @@ Keep Chrome visible the first few times so you can see parts land on the canvas.
 | Resistance, color, etc. | `tinkercad_set_component_attribute` |
 | Read or write Arduino code | `tinkercad_get_code`, `tinkercad_set_code` |
 | Run / stop sim, read serial | `tinkercad_start_simulation`, `tinkercad_stop_simulation`, `tinkercad_read_serial` |
+| Rename circuit title | `tinkercad_rename_circuit` |
+| Set privacy (public/shared/private) | `tinkercad_set_privacy` |
+| Wait cloud auto-save sync | `tinkercad_wait_save` |
 | Place, wire, and code in one go | `tinkercad_build_circuit` |
 
 Pin names look like `uno.D13` or `led1.anode`. Call `tinkercad_get_circuit` after placing parts so you use real ids.

@@ -1,6 +1,6 @@
 {
   "name": "tinkercad-mcp-server",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "MCP server that drives Tinkercad Circuits through a persistent Playwright browser session",
   "type": "module",
   "main": "dist/index.js",

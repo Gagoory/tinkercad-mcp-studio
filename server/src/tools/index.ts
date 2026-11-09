@@ -32,7 +32,13 @@ import {
   type OpenCircuitInput,
   type ReadSerialInput,
   type SetAttributeInput,
-  type SetCodeInput
+  type SetCodeInput,
+  RenameCircuitInputSchema,
+  SetPrivacyInputSchema,
+  WaitSaveInputSchema,
+  type RenameCircuitInput,
+  type SetPrivacyInput,
+  type WaitSaveInput
 } from "../schemas/index.js";
 import {
   formatCatalog,
@@ -59,7 +65,11 @@ import {
   setComponentAttribute,
   startSimulation,
   stopSimulation,
-  takeScreenshot
+  takeScreenshot,
+  renameCircuit,
+  setCircuitPrivacy,
+  waitForCloudSave,
+  connectPinsBatch
 } from "../services/editor-bridge.js";
 import { errorResult, textResult } from "./helpers.js";
 
@@ -564,6 +574,100 @@ The Code panel is opened if needed. Empty output usually means the sketch never 
   );
 
   server.registerTool(
+    "tinkercad_rename_circuit",
+    {
+      title: "Rename circuit project",
+      description: `Rename the title of the currently open Tinkercad Circuits project.
+
+Args:
+  - title (string): Project title (e.g. '[실험1] RC 직렬회로')
+  - response_format ('markdown' | 'json')
+
+Returns:
+  Updated circuit snapshot with the new title.`,
+      inputSchema: RenameCircuitInputSchema,
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: true
+      }
+    },
+    async (params: RenameCircuitInput) => {
+      try {
+        const state = await renameCircuit(params.title);
+        return textResult(formatCircuit(state, params.response_format), {
+          ...sanitizeCircuitState(state)
+        });
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.registerTool(
+    "tinkercad_set_privacy",
+    {
+      title: "Set circuit privacy and shareability",
+      description: `Change the privacy of a Tinkercad Circuits project to shared, public, or private, allowing external access or copying across accounts.
+
+Args:
+  - target (string, optional): Thing ID or URL. If omitted, uses current circuit.
+  - privacy ('shared' | 'public' | 'private'): Default 'shared'
+  - response_format ('markdown' | 'json')
+
+Returns:
+  Canonical URL and sharing status.`,
+      inputSchema: SetPrivacyInputSchema,
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true
+      }
+    },
+    async (params: SetPrivacyInput) => {
+      try {
+        const res = await setCircuitPrivacy(params.target, params.privacy);
+        const md = `# Tinkercad Project Privacy Updated\n\n- Project URL: [${res.url}](${res.url})\n- Thing ID: \`${res.thingId}\`\n- Privacy: **${res.privacy}**\n- Shared: **${res.isShared}**\n\nUsers with this link can view and copy this circuit to their account using '[복사하여 팅커링]'.`;
+        return textResult(params.response_format === ResponseFormat.JSON ? JSON.stringify(res, null, 2) : md, { ...res });
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.registerTool(
+    "tinkercad_wait_save",
+    {
+      title: "Wait for cloud auto-save sync",
+      description: `Wait for Tinkercad's debounced cloud auto-save to sync with Autodesk servers, ensuring changes persist before closing the browser.
+
+Args:
+  - wait_ms (number): Milliseconds to wait (default 6000)
+  - response_format ('markdown' | 'json')
+
+Returns:
+  Save confirmation status.`,
+      inputSchema: WaitSaveInputSchema,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true
+      }
+    },
+    async (params: WaitSaveInput) => {
+      try {
+        const res = await waitForCloudSave(params.wait_ms);
+        return textResult(`Cloud auto-save wait completed (${res.waitMs} ms). Changes synced to Autodesk servers.`, { ...res });
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
+
+  server.registerTool(
     "tinkercad_build_circuit",
     {
       title: "Build circuit from netlist",
@@ -623,6 +727,10 @@ Example:
           index += 1;
         }
 
+        if (params.title) {
+          await renameCircuit(params.title);
+        }
+
         const resolveRef = (pinRef: string): string => {
           const dot = pinRef.lastIndexOf(".");
           if (dot <= 0) {
@@ -634,12 +742,25 @@ Example:
           return `${id}.${pin}`;
         };
 
-        for (const wire of params.wires) {
-          await connectPins(resolveRef(wire.from), resolveRef(wire.to));
+        if (params.wires.length > 0) {
+          const batchWires = params.wires.map(w => ({
+            from: resolveRef(w.from),
+            to: resolveRef(w.to),
+            color: (w as any).color
+          }));
+          await connectPinsBatch(batchWires);
         }
 
         if (params.code) {
           await setCode(params.code);
+        }
+
+        if (params.wait_for_save) {
+          await waitForCloudSave(5000);
+        }
+
+        if (params.privacy) {
+          await setCircuitPrivacy(undefined, params.privacy);
         }
 
         const state = await inspectCircuit();

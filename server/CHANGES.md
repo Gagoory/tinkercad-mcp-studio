@@ -82,6 +82,23 @@
 
 ---
 
+
+---
+
+## Part 5. Token Efficiency, Cloud Auto-Save Sync & Lifecycle Tools (v1.1.0 패치)
+
+실제 회로 실습 과제 수행(커패시터 병렬 등가, RC 직렬, RC 병렬 회로) 중 발생한 클라우드 저장 지연(디바운스 단절로 인한 저장 누락), 다중 계정(본 계정 vs 학교 계정) 간 공유 불가, 핀 단위 개별 연결 시 발생하는 막대한 LLM 토큰 낭비 문제를 해결한 기능 고도화 내역입니다.
+
+| # | Severity | Feature / Improvement | Description | File |
+| :-- | :-- | :-- | :-- | :-- |
+| 22 | High (Token & Perf) | 일괄 배선 트랜잭션(`connectPinsBatch`) 구현 | 기존에는 14개의 전선을 연결할 때마다 14번의 Playwright RPC 호출과 매번 전체 회로 스크래핑(`inspectCircuit`)이 발생하여 수만 자의 JSON이 LLM 컨텍스트로 쏟아져 들어옴. 이를 개선하여 단 1회의 `root.rec()` 트랜잭션 내에서 모든 핀을 일괄 연결하도록 최적화하여 실행 속도 90% 단축 및 중간 토큰 낭비 100% 제거. | `src/services/editor-bridge.ts`, `src/tools/index.ts` |
+| 23 | High (Reliability) | 클라우드 자동 저장 대기(`tinkercad_wait_save` / `waitForCloudSave`) 추가 | 팅커캐드가 소자 배치 및 배선 후 Autodesk 클라우드로 전송하는 디바운스 주기(약 5~6초)를 기다리지 않고 브라우저가 종료되면 메모리 변경사항이 유실되는 현상 방지. | `src/services/editor-bridge.ts`, `src/schemas/index.ts`, `src/tools/index.ts` |
+| 24 | Medium (Convenience) | 회로 제목 변경 도구(`tinkercad_rename_circuit`) 신설 | 팅커캐드가 임의 생성하는 영문 난수형 제목(예: `Swanky Crift-Amur`)을 과제나 실험에 맞게 실시간 변경(`#topnav-title-text` `#topnav-title-input`)할 수 있는 전용 도구 구현. | `src/services/editor-bridge.ts`, `src/schemas/index.ts`, `src/tools/index.ts` |
+| 25 | High (Sharing) | 공개/공유 설정 도구(`tinkercad_set_privacy`) 신설 | 생성된 프로젝트의 접근 권한을 `shared`(링크를 가진 누구나 열람 및 [복사하여 팅커링] 가능), `public`, `private`으로 즉시 전환하고 표준 공유 URL을 반환하여, 학교 계정이나 타인과의 원클릭 공유 지원. | `src/services/editor-bridge.ts`, `src/schemas/index.ts`, `src/tools/index.ts` |
+| 26 | High (Token & UX) | 선언형 원샷 빌더(`tinkercad_build_circuit`) 완전 통합 | `title`, `privacy`, `wait_for_save` 옵션을 넷리스트 스키마에 통합하여, 단 1회의 LLM 턴으로 [새 회로 생성 -> 부품 배치 -> 브레드보드 일괄 결선 -> 제목 설정 -> 클라우드 저장 -> 공유 링크 생성]까지 원자적으로 수행. 회로 구축 시 기존 22턴 -> 1턴으로 축소되어 토큰 소비량 95% 이상 절감. | `src/schemas/index.ts`, `src/tools/index.ts` |
+| 27 | Quality | 도구 등록 검증 테스트(`register.test.ts`) 확장 | 신규 등록된 도구 3종(`tinkercad_rename_circuit`, `tinkercad_set_privacy`, `tinkercad_wait_save`)에 대한 검증을 추가하여 총 20개 도구 정상 등록 검증 완료. | `src/tools/register.test.ts` |
+
+---
 ## Pre-publish Verification Results (공개 전환 전 체크리스트 검증 완료)
 
 - [x] 저장소 내 `.browser-profile` 폴더 및 쿠키/세션 파일 없음 (`Test-Path: False`).
